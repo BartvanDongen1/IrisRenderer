@@ -136,6 +136,8 @@ struct PipelineObjectDesc
 	std::vector<SamplerDesc> samplers;
 
 	rootSignatureFlags rootSignatureFlags;
+
+	bool cullFront{ false };
 };
 
 // -------------------------

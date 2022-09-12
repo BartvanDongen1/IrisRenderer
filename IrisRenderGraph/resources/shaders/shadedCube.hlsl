@@ -1,6 +1,6 @@
 
 Texture2D g_texture : register(t0);
-SamplerState g_sampler : register(s0);
+SamplerComparisonState g_sampler : register(s0);
 
 cbuffer SceneConstantBuffer : register(b0)
 {
@@ -38,34 +38,34 @@ PSInput VSMain(float4 position : POSITION, float2 texCoord : TEXCOORD)
     return result;
 }
 
-float2 calculateShadow(const float4 shadowPosition)
-{
-    // perspective divide to normalize vector
-    float3 projectedCoords = shadowPosition.xyz / shadowPosition.w;
+//float2 calculateShadow(const float4 shadowPosition)
+//{
+//    // perspective divide to normalize vector
+//    float3 projectedCoords = shadowPosition.xyz / shadowPosition.w;
     
-    //go from range [-1,1] to [0,1]
-    //projectedCoords = projectedCoords * 0.5f + 0.5f;
+//    //go from range [-1,1] to [0,1]
+//    //projectedCoords = projectedCoords * 0.5f + 0.5f;
     
-    float closestDepth = g_texture.Sample(g_sampler, projectedCoords.xy).x;
-    float currentDepth = projectedCoords.z;
+//    float closestDepth = g_texture.Sample(g_sampler, projectedCoords.xy).x;
+//    float currentDepth = projectedCoords.z;
     
-    if (projectedCoords.z > 1.0)
-    {
-        //return 0;
-    }
+//    if (projectedCoords.z > 1.0)
+//    {
+//        //return 0;
+//    }
     
-    //if (projectedCoords.x < 0 || projectedCoords.x > 1 || projectedCoords.y < 0 || projectedCoords.y > 1)
-    //{
-    //    return 1;
-    //}
+//    //if (projectedCoords.x < 0 || projectedCoords.x > 1 || projectedCoords.y < 0 || projectedCoords.y > 1)
+//    //{
+//    //    return 1;
+//    //}
     
-    //return 0;
+//    //return 0;
     
-    // compare depth values
-    float shadow = currentDepth > closestDepth ? 1.0 : 0.0;
+//    // compare depth values
+//    float shadow = currentDepth > closestDepth ? 1.0 : 0.0;
     
-    return float2(currentDepth, currentDepth);
-}
+//    return float2(currentDepth, currentDepth);
+//}
 
 float calculateShadow2(const float4 shadowPosition)
 {
@@ -75,23 +75,29 @@ float calculateShadow2(const float4 shadowPosition)
     //go from range [-1,1] to [0,1]
     //projectedCoords = projectedCoords * 0.5f + 0.5f;
     
-    float closestDepth = g_texture.Sample(g_sampler, projectedCoords.xy).x;
-    float currentDepth = projectedCoords.z;
-    
     if (projectedCoords.z > 1.0)
     {
-        return 0;
+        return 1;
     }
     
     if (projectedCoords.x < 0 || projectedCoords.x > 1 || projectedCoords.y < 0 || projectedCoords.y > 1)
     {
-        return 0;
+        return 1;
     }
     
-    // compare depth values
-    float shadow = currentDepth > closestDepth ? 1.0 : 0.0;
+    float returnValue = g_texture.SampleCmpLevelZero(g_sampler, projectedCoords.xy, projectedCoords.z);
     
-    return shadow;
+    return returnValue;
+    
+    //float closestDepth = g_texture.Sample(g_sampler, projectedCoords.xy).x;
+    //float currentDepth = projectedCoords.z;
+    
+   
+    
+    //// compare depth values
+    //float shadow = currentDepth > closestDepth ? 1.0 : 0.0;
+    
+    //return shadow;
 }
 
 
@@ -127,10 +133,14 @@ float4 PSMain(PSInput input) : SV_TARGET
     
     float4 myColor = color;
     
-    if (calculateShadow2(input.shadowCoord) > 0.5)
-    {
-        myColor *= float4(0.4f, 0.4f, 0.4f, 1.0f);
-    }
+    float shadow = calculateShadow2(input.shadowCoord);
+
+    float min = 0.99f;
+    float max = 1.f;
+    
+    float temp = ((shadow - min) / (max - min));
+    
+    myColor *= float4(temp, temp, temp, 1.0f);
   
     return myColor;
     

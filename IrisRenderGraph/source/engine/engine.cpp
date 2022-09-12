@@ -2,7 +2,7 @@
 
 void Engine::init()
 {
-	window.init(1080, 720, "Iris Application");
+	window.init(2920, 1080, "Iris Application");
 
 	controller.init();
 

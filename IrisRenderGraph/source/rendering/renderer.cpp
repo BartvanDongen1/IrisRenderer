@@ -50,7 +50,7 @@ bool Renderer::init()
 		Job* myJob = skybox->getJob();
 		myJob->addPass("draw");
 
-		//graph->addJob(myJob);
+		graph->addJob(myJob);
 	}
 
 	{

@@ -63,6 +63,8 @@ void TheCube::init()
 			myDesc.vertexLayout.push_back(vertexType::Normal3);
 			myDesc.vertexLayout.push_back(vertexType::TexCoord2);
 
+			myDesc.cullFront = true;
+
 			shadowPassBuffer = new ShadowBuffer();
 
 			myDesc.constBuffers.push_back({ "mvp", sizeof(ShadowBuffer), shadowPassBuffer });
@@ -102,9 +104,9 @@ void TheCube::update(float aDeltaTime)
 	const float aspectRatio = 1.f;
 	const float horizontalFov = 3.141592f / 2.f;
 
-	glm::mat4 lightProjectionMat2 = glm::orthoLH_ZO(-10.f, 10.f, -10.f, 10.f, 0.1f, 1000.f);
+	//glm::mat4 lightProjectionMat2 = glm::orthoLH_ZO(-10.f, 10.f, -10.f, 10.f, 0.1f, 1000.f);
 
-	glm::mat4 lightProjectionMat = glm::perspectiveLH_ZO(horizontalFov, aspectRatio, 0.1f, 9999.f);
+	glm::mat4 lightProjectionMat = glm::perspectiveLH_ZO(horizontalFov, aspectRatio, 0.1f, 150.f);
 
 	shadowPassBuffer->modelMatrix = getModelMatrix();
 	shadowPassBuffer->viewProjectionMatrix = lightProjectionMat * lightViewMat;

@@ -840,6 +840,12 @@ PipelineObject* RenderBackend::createPipelineObject(PipelineObjectDesc aDesc)
         psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 
         psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+
+        if (aDesc.cullFront)
+        {
+            psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_FRONT;
+        }
+
         //psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 
         psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT); // Less-equal depth test w/ writes; no stencil
@@ -1211,8 +1217,8 @@ Sampler* RenderBackend::initSampler(SamplerDesc aDesc)
     mySampler->description.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
     mySampler->description.MipLODBias = 0.0f;
     mySampler->description.MaxAnisotropy = 0;
-    mySampler->description.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-    mySampler->description.BorderColor[0] = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+    mySampler->description.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS;
+    mySampler->description.BorderColor[0] = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE;
     mySampler->description.MinLOD = 0;
     mySampler->description.MaxLOD = D3D12_FLOAT32_MAX;
 
