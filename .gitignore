@@ -3,6 +3,12 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# renderdoc captures
+*.cap
+
+# batch files
+*.bat
+
 # User-specific files
 *.rsuser
 *.suo
@@ -75,7 +81,7 @@ StyleCopReport.xml
 *_h.h
 *.ilk
 *.meta
-*.obj
+# *.obj
 *.iobj
 *.pch
 *.pdb
