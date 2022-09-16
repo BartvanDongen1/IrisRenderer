@@ -30,8 +30,8 @@ RenderPassGraph::RenderPassGraph()
 	resourceMap.insert({ "postInputBuffer", myPostInputBuffer });
 
 	RenderTargetDesc myShadowMapDesc;
-	myShadowMapDesc.size[0] = 720;
-	myShadowMapDesc.size[1] = 720;
+	myShadowMapDesc.size[0] = 512;
+	myShadowMapDesc.size[1] = 512;
 
 	RenderTarget* myShadowMapBuffer = RenderBackend::createRenderTarget(myShadowMapDesc);
 	resourceMap.insert({ "shadowMapBuffer", myShadowMapBuffer });

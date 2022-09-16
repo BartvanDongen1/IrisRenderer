@@ -23,3 +23,8 @@ glm::mat4 Camera::getProjectionMatrix()
 
 	return glm::perspectiveLH_ZO(horizontalFov, aspectRatio, nearPlane, farPlane);
 }
+
+glm::vec3 Camera::getPosition()
+{
+	return position;
+}

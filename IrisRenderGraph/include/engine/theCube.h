@@ -10,11 +10,16 @@ struct MVPBuffer
 	glm::mat4 viewProjectionMatrix;
 	glm::mat4 modelMatrix;
 
+	glm::vec4 viewPosition;
+
 	glm::vec4 color;
 
 	glm::mat4 depthBiasMVP;
+	glm::vec4 lightPosition;
 
-	float padding[12];
+	int properties;
+
+	float padding[3];
 };
 
 struct ShadowBuffer
@@ -30,13 +35,14 @@ class TheCube
 public:
 	TheCube() {};
 
-	void init();
+	void init(const char* aModel = "resources/meshes/TheCube.obj");
 	void update(float aDeltaTime);
 	void shutdown();
 
 	Job* getJob();
 	Job* getShadowPassJob();
 
+	void setSpecular(bool value = true);
 	void setCamera(Camera* aCamera) { camera = aCamera; };
 	glm::mat4 getModelMatrix();
 
@@ -48,6 +54,7 @@ public:
 
 	float lightPos{ 0 };
 private:
+
 	Camera* camera;
 
 	Drawable* drawable;

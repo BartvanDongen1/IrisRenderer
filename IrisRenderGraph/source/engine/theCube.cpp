@@ -9,7 +9,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-void TheCube::init()
+void TheCube::init(const char* aModel)
 {
 	// setup for draw pass
 	{
@@ -43,7 +43,7 @@ void TheCube::init()
 		{
 			MeshDesc myDesc;
 
-			myDesc = ResourceLoader::getMesh("resources/meshes/TheCube.obj");
+			myDesc = ResourceLoader::getMesh(aModel);
 
 			drawable->setMesh(myDesc);
 		}
@@ -75,7 +75,7 @@ void TheCube::init()
 		{
 			MeshDesc myDesc;
 
-			myDesc = ResourceLoader::getMesh("resources/meshes/TheCube.obj");
+			myDesc = ResourceLoader::getMesh(aModel);
 
 			shadowPassDrawable->setMesh(myDesc);
 		}
@@ -84,9 +84,9 @@ void TheCube::init()
 
 void TheCube::update(float aDeltaTime)
 {
-	//lightPos += aDeltaTime * 1;
+	lightPos += aDeltaTime * 1;
 
-	//if (lightPos > 5) lightPos = -5;
+	if (lightPos > 10) lightPos = -10;
 
 	glm::mat4 biasMatrix(
 		0.5, 0.0, 0.0, 0.0,
@@ -95,29 +95,27 @@ void TheCube::update(float aDeltaTime)
 		0.5, 0.5, 0.5, 1.0
 	);
 
-	glm::vec3 lightPosition{ 10, 10, -10 };
+	glm::vec3 lightPosition{ 0 + lightPos, 10, -10 };
 	glm::vec3 lightDirection{ -1, -1, 1 };
 	lightDirection = glm::normalize(lightDirection);
 
-	glm::mat4 lightViewMat = glm::lookAtLH(lightPosition, lightPosition + lightDirection, glm::vec3(0, 1, 0));
+	glm::mat4 lightViewMat = glm::lookAtLH(lightPosition, glm::vec3(0,0,0), glm::vec3(0, 1, 0));
 
 	const float aspectRatio = 1.f;
 	const float horizontalFov = 3.141592f / 2.f;
 
-	//glm::mat4 lightProjectionMat2 = glm::orthoLH_ZO(-10.f, 10.f, -10.f, 10.f, 0.1f, 1000.f);
-
-	glm::mat4 lightProjectionMat = glm::perspectiveLH_ZO(horizontalFov, aspectRatio, 0.1f, 150.f);
+	glm::mat4 lightProjectionMat = glm::perspectiveLH_ZO(horizontalFov, aspectRatio, 0.1f, 50.f);
 
 	shadowPassBuffer->modelMatrix = getModelMatrix();
 	shadowPassBuffer->viewProjectionMatrix = lightProjectionMat * lightViewMat;
 
-	
-
-	buffer->depthBiasMVP = biasMatrix * shadowPassBuffer->viewProjectionMatrix;
+	buffer->depthBiasMVP = shadowPassBuffer->viewProjectionMatrix;
+	buffer->lightPosition = glm::vec4(lightPosition, 1);
 
 	buffer->color = glm::vec4(color, 1.f);
 	buffer->modelMatrix = getModelMatrix();
 	buffer->viewProjectionMatrix = camera->getProjectionMatrix() * camera->getViewMatrix();
+	buffer->viewPosition = glm::vec4(camera->getPosition(), 1);
 }
 
 void TheCube::shutdown()
@@ -157,4 +155,9 @@ glm::mat4 TheCube::getModelMatrix()
 	glm::mat4 myRotateZ = glm::rotate(glm::mat4(1), rotation.z, glm::vec3(0, 0, 1));
 
 	return myTranslateMatrix * myRotateZ * myRotateY * myRotateX * myScaleMatrix;
+}
+
+void TheCube::setSpecular(bool value)
+{
+	buffer->properties |= (0x1 << 31);
 }

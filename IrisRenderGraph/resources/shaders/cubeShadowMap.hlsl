@@ -24,12 +24,5 @@ PSInput VSMain(float4 position : POSITION, float2 texCoord : TEXCOORD)
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-    //if (input.position.z > 0.5)
-    //{
-    //    return float4(1, 0, 0, 1);
-    //}
-    
     return float4(input.position.z, input.position.z, input.position.z, 1.0f);
-    
-    //return color;
 }
