@@ -146,8 +146,11 @@ struct PipelineObjectDesc
 
 struct MeshDesc
 {
-	void* data;
-	size_t dataSize;
+	void* vertexData{ nullptr };
+	size_t vertexDataSize{ 0 };
+
+	void* indexData{ nullptr };
+	size_t indexDataSize{ 0 };
 
 	std::vector<vertexType> vertexLayout;
 };

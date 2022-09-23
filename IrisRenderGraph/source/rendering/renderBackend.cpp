@@ -87,6 +87,10 @@ UINT64 fenceValues[frameCount]{ 0 };
 static ID3D12DescriptorHeap* pd3dSrvDescHeap = NULL;
 ImGuiIO* io;
 
+//index buffer stuff
+UINT32* defaultIndexBufferData{ nullptr };
+size_t defaultIndexBufferDataSize{ 0 };
+
 // debug drawing stuff
 Microsoft::WRL::ComPtr<ID3D12RootSignature> debugRootSignature;
 Microsoft::WRL::ComPtr<ID3D12PipelineState> debugPipelineState;
@@ -129,6 +133,8 @@ void GetHardwareAdapter(
 void waitForGpu();
 
 void initDebugVaiables();
+
+UINT32* generateDefaultIndexBuffer(size_t aSize);
 
 // -------------------------------------------
 
@@ -903,40 +909,90 @@ Mesh* RenderBackend::createMesh(MeshDesc aDesc)
         }
     }
 
-    myMesh->vertexStride = myVertexStride;
+    assert(aDesc.vertexDataSize > 0);
+    
+    // vertex buffer
+    {
+        myMesh->vertexStride = myVertexStride;
 
-    assert(aDesc.dataSize > 0);
+        myMesh->vertexDataSize = aDesc.vertexDataSize;
+        myMesh->vertexData = malloc(aDesc.vertexDataSize);
+        memcpy(myMesh->vertexData, aDesc.vertexData, aDesc.vertexDataSize);
 
-    myMesh->dataSize = aDesc.dataSize;
-    myMesh->data = malloc(aDesc.dataSize);
-    memcpy(myMesh->data, aDesc.data, aDesc.dataSize);
+        myMesh->vertexCount = static_cast<int>(myMesh->vertexDataSize) / myMesh->vertexStride;
 
-    myMesh->vertexCount = static_cast<int>(myMesh->dataSize) / myMesh->vertexStride;
+        // create vertex buffer
+        auto myHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+        auto myResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(myMesh->vertexDataSize);
 
-    auto myHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-    auto myResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(myMesh->dataSize);
+        ThrowIfFailed(device->CreateCommittedResource
+        (
+            &myHeapProperties,
+            D3D12_HEAP_FLAG_NONE,
+            &myResourceDesc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&myMesh->vertexBuffer)
+        ));
 
-    ThrowIfFailed(device->CreateCommittedResource
-    (
-        &myHeapProperties,
-        D3D12_HEAP_FLAG_NONE,
-        &myResourceDesc,
-        D3D12_RESOURCE_STATE_GENERIC_READ,
-        nullptr,
-        IID_PPV_ARGS(&myMesh->vertexBuffer)
-    ));
+        // Copy the data to the vertex buffer.
+        UINT8* pVertexDataBegin;
+        CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
+        ThrowIfFailed(myMesh->vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
+        memcpy(pVertexDataBegin, myMesh->vertexData, myMesh->vertexDataSize);
+        myMesh->vertexBuffer->Unmap(0, nullptr);
 
-    // Copy the triangle data to the vertex buffer.
-    UINT8* pVertexDataBegin;
-    CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
-    ThrowIfFailed(myMesh->vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
-    memcpy(pVertexDataBegin, myMesh->data, myMesh->dataSize);
-    myMesh->vertexBuffer->Unmap(0, nullptr);
+        // Initialize the vertex buffer view.
+        myMesh->vertexBufferView.BufferLocation = myMesh->vertexBuffer->GetGPUVirtualAddress();
+        myMesh->vertexBufferView.StrideInBytes = myMesh->vertexStride;
+        myMesh->vertexBufferView.SizeInBytes = static_cast<UINT>(myMesh->vertexDataSize);
+    }
 
-    // Initialize the vertex buffer view.
-    myMesh->vertexBufferView.BufferLocation = myMesh->vertexBuffer->GetGPUVirtualAddress();
-    myMesh->vertexBufferView.StrideInBytes = myMesh->vertexStride;
-    myMesh->vertexBufferView.SizeInBytes = static_cast<UINT>(myMesh->dataSize);
+    //index buffer
+    {
+        // only use index buffer if one is given, otherwise create one in the function
+        if (aDesc.indexDataSize > 0)
+        {
+            myMesh->indexDataSize = aDesc.indexDataSize;
+            myMesh->indexData = malloc(aDesc.indexDataSize);
+            memcpy(myMesh->indexData, aDesc.indexData, aDesc.indexDataSize);
+
+            myMesh->indexCount = static_cast<int>(myMesh->indexDataSize) / sizeof(UINT32);
+        }
+        else
+        {
+            myMesh->indexDataSize = myMesh->vertexCount * sizeof(UINT32);
+            myMesh->indexCount = myMesh->vertexCount;
+
+            myMesh->indexData = generateDefaultIndexBuffer(myMesh->indexCount);
+        }
+
+        // create index buffer
+        auto myHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+        auto myResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(myMesh->indexDataSize);
+
+        ThrowIfFailed(device->CreateCommittedResource
+        (
+            &myHeapProperties,
+            D3D12_HEAP_FLAG_NONE,
+            &myResourceDesc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&myMesh->indexBuffer)
+        ));
+
+        // Copy the data to the index buffer.
+        UINT8* pIndexDataBegin;
+        CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
+        ThrowIfFailed(myMesh->indexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pIndexDataBegin)));
+        memcpy(pIndexDataBegin, myMesh->indexData, myMesh->indexDataSize);
+        myMesh->indexBuffer->Unmap(0, nullptr);
+
+        // Initialize the vertex buffer view.
+        myMesh->indexBufferView.BufferLocation = myMesh->indexBuffer->GetGPUVirtualAddress();
+        myMesh->indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+        myMesh->indexBufferView.SizeInBytes = static_cast<UINT>(myMesh->indexDataSize);
+    }
 
     return myMesh;
 }
@@ -1001,7 +1057,9 @@ void RenderBackend::drawDrawable(Drawable* aDrawable)
     // Record commands.
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     commandList->IASetVertexBuffers(0, 1, &aDrawable->mesh->vertexBufferView);
-    commandList->DrawInstanced(aDrawable->mesh->vertexCount, 1, 0, 0);
+    commandList->IASetIndexBuffer(&aDrawable->mesh->indexBufferView);
+
+    commandList->DrawIndexedInstanced(aDrawable->mesh->indexCount, 1, 0, 0, 0);
 }
 
 ConstBuffer* RenderBackend::initConstBuffer(ConstBufferDesc aDesc)
@@ -1451,4 +1509,30 @@ void initDebugVaiables()
         debugVertexBufferView.StrideInBytes = myVertexStride;
         debugVertexBufferView.SizeInBytes = static_cast<UINT>(sizeof(PointVertex) * MAX_VERTICES);
     }
+}
+
+UINT32* generateDefaultIndexBuffer(size_t aSize)
+{
+    // index buffer is already big enough
+    if (aSize <= defaultIndexBufferDataSize) return defaultIndexBufferData;
+
+    // allocate the correct amount of memory
+    if (defaultIndexBufferDataSize == 0)
+    {
+        defaultIndexBufferData = reinterpret_cast<UINT32*>(malloc(aSize * sizeof(UINT32)));
+    }
+    else
+    {
+        defaultIndexBufferData = reinterpret_cast<UINT32*>(realloc(defaultIndexBufferData, aSize * sizeof(UINT32)));
+    }
+
+    // fill the buffer with data
+    for (int i = static_cast<int>(defaultIndexBufferDataSize); i < static_cast<int>(aSize); i++)
+    {
+        defaultIndexBufferData[i] = i;
+    }
+
+    defaultIndexBufferDataSize = aSize;
+
+    return defaultIndexBufferData;
 }

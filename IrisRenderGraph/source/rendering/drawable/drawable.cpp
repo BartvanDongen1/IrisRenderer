@@ -53,8 +53,8 @@ void Drawable::initAsDefaultTriangle()
 			-0.4f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f
 		};
 	
-		myDesc.data = triangleVerices;
-		myDesc.dataSize = sizeof(triangleVerices);
+		myDesc.vertexData = triangleVerices;
+		myDesc.vertexDataSize = sizeof(triangleVerices);
 	
 		myDesc.vertexLayout.push_back(vertexType::Position3);
 		myDesc.vertexLayout.push_back(vertexType::Normal3);
