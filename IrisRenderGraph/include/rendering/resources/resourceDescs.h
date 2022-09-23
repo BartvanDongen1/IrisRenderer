@@ -107,9 +107,9 @@ struct TextureDesc
 {
 	const char* name{ "default" };
 
-	int width;
-	int height;
-	int bytesPerPixel;
+	int width{ 0 };
+	int height{ 0 };
+	int bytesPerPixel{ 0 };
 
 	void* data{ nullptr };
 
@@ -144,13 +144,21 @@ struct PipelineObjectDesc
 // vertexBuffer
 // -------------------------
 
+enum class IndexBufferFormat
+{
+	uint16,
+	uint32
+};
+
 struct MeshDesc
 {
 	void* vertexData{ nullptr };
 	size_t vertexDataSize{ 0 };
 
+	std::vector<vertexType> vertexLayout;
+
 	void* indexData{ nullptr };
 	size_t indexDataSize{ 0 };
 
-	std::vector<vertexType> vertexLayout;
+	IndexBufferFormat indexBufferFormat{ IndexBufferFormat::uint16 };
 };

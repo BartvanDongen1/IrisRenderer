@@ -12,6 +12,6 @@ public:
 	void update(void* aData, size_t aSize) override;
 
 private:
-	D3D12_SAMPLER_DESC description;
+	D3D12_SAMPLER_DESC description{};
 };
 

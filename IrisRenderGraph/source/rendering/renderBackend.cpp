@@ -69,11 +69,11 @@ constexpr auto samplerHeapMaxSize = 1024;
 
 ComPtr<ID3D12DescriptorHeap> cbvSrvUavHeap;
 UINT cbvSrvUavDescriptorSize{ 0 };
-int cbvSrvUavDescriptorCount{ 0 };
+UINT cbvSrvUavDescriptorCount{ 0 };
 
 ComPtr<ID3D12DescriptorHeap> samplerHeap;
 UINT samplerDescriptorSize{ 0 };
-int samplerDescriptorCount{ 0 };
+UINT samplerDescriptorCount{ 0 };
 
 ComPtr<ID3D12GraphicsCommandList> commandList;
 
@@ -88,8 +88,11 @@ static ID3D12DescriptorHeap* pd3dSrvDescHeap = NULL;
 ImGuiIO* io;
 
 //index buffer stuff
-UINT32* defaultIndexBufferData{ nullptr };
-size_t defaultIndexBufferDataSize{ 0 };
+UINT32* defaultIndexBufferData32{ nullptr };
+size_t defaultIndexBufferDataSize32{ 0 };
+
+UINT16* defaultIndexBufferData16{ nullptr };
+size_t defaultIndexBufferDataSize16{ 0 };
 
 // debug drawing stuff
 Microsoft::WRL::ComPtr<ID3D12RootSignature> debugRootSignature;
@@ -134,7 +137,7 @@ void waitForGpu();
 
 void initDebugVaiables();
 
-UINT32* generateDefaultIndexBuffer(size_t aSize);
+void* generateDefaultIndexBuffer(size_t aSize, IndexBufferFormat aFormat);
 
 // -------------------------------------------
 
@@ -588,7 +591,7 @@ RenderTarget* RenderBackend::createRenderTarget(RenderTargetDesc aDesc)
 
     D3D12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(myRenderTarget->rtvFormat,
         static_cast<UINT64>(myRenderTarget->width),
-        static_cast<UINT64>(myRenderTarget->height),
+        static_cast<UINT>(myRenderTarget->height),
         1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
 
     float clearColor[4]{ 0,0,0,1 };
@@ -625,7 +628,7 @@ RenderTarget* RenderBackend::createRenderTarget(RenderTargetDesc aDesc)
 
     const CD3DX12_RESOURCE_DESC depthStencilTextureDesc = CD3DX12_RESOURCE_DESC::Tex2D(myRenderTarget->dsvFormat,
         static_cast<UINT64>(myRenderTarget->width),
-        static_cast<UINT64>(myRenderTarget->height),
+        static_cast<UINT>(myRenderTarget->height),
         1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
 
     ThrowIfFailed(device->CreateCommittedResource(
@@ -950,6 +953,19 @@ Mesh* RenderBackend::createMesh(MeshDesc aDesc)
 
     //index buffer
     {
+        size_t myIndexSize = 0;
+        DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
+        if (aDesc.indexBufferFormat == IndexBufferFormat::uint16)
+        {
+            myIndexSize = sizeof(UINT16);
+            format = DXGI_FORMAT_R16_UINT;
+        }
+        else
+        {
+            myIndexSize = sizeof(UINT32);
+            format = DXGI_FORMAT_R32_UINT;
+        }
+
         // only use index buffer if one is given, otherwise create one in the function
         if (aDesc.indexDataSize > 0)
         {
@@ -957,14 +973,14 @@ Mesh* RenderBackend::createMesh(MeshDesc aDesc)
             myMesh->indexData = malloc(aDesc.indexDataSize);
             memcpy(myMesh->indexData, aDesc.indexData, aDesc.indexDataSize);
 
-            myMesh->indexCount = static_cast<int>(myMesh->indexDataSize) / sizeof(UINT32);
+            myMesh->indexCount = static_cast<int>(myMesh->indexDataSize) / static_cast<int>(myIndexSize);
         }
         else
         {
-            myMesh->indexDataSize = myMesh->vertexCount * sizeof(UINT32);
+            myMesh->indexDataSize = myMesh->vertexCount * myIndexSize;
             myMesh->indexCount = myMesh->vertexCount;
 
-            myMesh->indexData = generateDefaultIndexBuffer(myMesh->indexCount);
+            myMesh->indexData = generateDefaultIndexBuffer(myMesh->indexCount, aDesc.indexBufferFormat);
         }
 
         // create index buffer
@@ -990,7 +1006,7 @@ Mesh* RenderBackend::createMesh(MeshDesc aDesc)
 
         // Initialize the vertex buffer view.
         myMesh->indexBufferView.BufferLocation = myMesh->indexBuffer->GetGPUVirtualAddress();
-        myMesh->indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+        myMesh->indexBufferView.Format = format;
         myMesh->indexBufferView.SizeInBytes = static_cast<UINT>(myMesh->indexDataSize);
     }
 
@@ -1233,8 +1249,8 @@ Texture* RenderBackend::getTextureFromRenderTarget(RenderTarget* aRenderTarget, 
     D3D12_RESOURCE_DESC textureDesc = {};
     textureDesc.MipLevels = 1;
     textureDesc.Format = myFormat;
-    textureDesc.Width = aRenderTarget->width;
-    textureDesc.Height = aRenderTarget->height;
+    textureDesc.Width = static_cast<UINT>(aRenderTarget->width);
+    textureDesc.Height = static_cast<UINT>(aRenderTarget->height);
     textureDesc.Flags = myFlags;
     textureDesc.DepthOrArraySize = 1;
     textureDesc.SampleDesc.Count = 1;
@@ -1405,7 +1421,7 @@ void initDebugVaiables()
             D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
         CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-        rootSignatureDesc.Init_1_1(myRootParameters.size(), myRootParameters.data(), 0, nullptr, rootSignatureFlags);
+        rootSignatureDesc.Init_1_1(static_cast<UINT>(myRootParameters.size()), myRootParameters.data(), 0, nullptr, rootSignatureFlags);
 
         ComPtr<ID3DBlob> signature;
         ComPtr<ID3DBlob> error;
@@ -1511,28 +1527,60 @@ void initDebugVaiables()
     }
 }
 
-UINT32* generateDefaultIndexBuffer(size_t aSize)
+void* generateDefaultIndexBuffer(size_t aSize, IndexBufferFormat aFormat)
 {
+    if (aFormat == IndexBufferFormat::uint16)
+    {
+        // use 16 bit uints
+        // --------------------
+        
+        // index buffer is already big enough
+        if (aSize <= defaultIndexBufferDataSize16) return defaultIndexBufferData16;
+
+        // allocate the correct amount of memory
+        if (defaultIndexBufferDataSize16 == 0)
+        {
+            defaultIndexBufferData16 = reinterpret_cast<UINT16*>(malloc(aSize * sizeof(UINT16)));
+        }
+        else
+        {
+            defaultIndexBufferData16 = reinterpret_cast<UINT16*>(realloc(defaultIndexBufferData16, aSize * sizeof(UINT16)));
+        }
+
+        // fill the buffer with data
+        for (int i = static_cast<int>(defaultIndexBufferDataSize16); i < static_cast<int>(aSize); i++)
+        {
+            defaultIndexBufferData16[i] = i;
+        }
+
+        defaultIndexBufferDataSize16 = aSize;
+
+        return defaultIndexBufferData16;
+    }
+
+    // use 32 bit uints
+    // --------------------
+
     // index buffer is already big enough
-    if (aSize <= defaultIndexBufferDataSize) return defaultIndexBufferData;
+    if (aSize <= defaultIndexBufferDataSize32) return defaultIndexBufferData32;
 
     // allocate the correct amount of memory
-    if (defaultIndexBufferDataSize == 0)
+    if (defaultIndexBufferDataSize32 == 0)
     {
-        defaultIndexBufferData = reinterpret_cast<UINT32*>(malloc(aSize * sizeof(UINT32)));
+        defaultIndexBufferData32 = reinterpret_cast<UINT32*>(malloc(aSize * sizeof(UINT32)));
     }
     else
     {
-        defaultIndexBufferData = reinterpret_cast<UINT32*>(realloc(defaultIndexBufferData, aSize * sizeof(UINT32)));
+        defaultIndexBufferData32 = reinterpret_cast<UINT32*>(realloc(defaultIndexBufferData32, aSize * sizeof(UINT32)));
     }
 
     // fill the buffer with data
-    for (int i = static_cast<int>(defaultIndexBufferDataSize); i < static_cast<int>(aSize); i++)
+    for (int i = static_cast<int>(defaultIndexBufferDataSize32); i < static_cast<int>(aSize); i++)
     {
-        defaultIndexBufferData[i] = i;
+        defaultIndexBufferData32[i] = i;
     }
 
-    defaultIndexBufferDataSize = aSize;
+    defaultIndexBufferDataSize32 = aSize;
 
-    return defaultIndexBufferData;
+    return defaultIndexBufferData32;
 }

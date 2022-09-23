@@ -30,8 +30,8 @@ void RenderTarget::endScene(_In_ ID3D12GraphicsCommandList * aCommandList)
 Texture* RenderTarget::getRtvTexture()
 {
     TextureDesc textureDesc{};
-    textureDesc.width = width;
-    textureDesc.height = height;
+    textureDesc.width = static_cast<int>(width);
+    textureDesc.height = static_cast<int>(height);
     textureDesc.bytesPerPixel = 4;
     textureDesc.data = nullptr;
 
@@ -43,8 +43,8 @@ Texture* RenderTarget::getRtvTexture()
 Texture* RenderTarget::getDsvTexture()
 {
     TextureDesc textureDesc{};
-    textureDesc.width = width;
-    textureDesc.height = height;
+    textureDesc.width = static_cast<int>(width);
+    textureDesc.height = static_cast<int>(height);
     textureDesc.bytesPerPixel = 4;
     textureDesc.data = nullptr;
 
