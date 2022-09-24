@@ -3,10 +3,9 @@
 int main()
 {
 	Engine myEngine;
+	Timer timer;
 
 	myEngine.init();
-
-	Timer timer;
 
 	while (!myEngine.shouldClose())
 	{

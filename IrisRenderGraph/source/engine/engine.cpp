@@ -1,5 +1,6 @@
 #include "engine/engine.h"
 #include "engine/resourceLoader.h"
+#include "engine\logger.h"
 
 void Engine::init()
 {
