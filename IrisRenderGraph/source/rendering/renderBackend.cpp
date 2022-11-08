@@ -836,6 +836,15 @@ PipelineObject* RenderBackend::createPipelineObject(PipelineObjectDesc aDesc)
             myVertexStride += 2 * sizeof(float);
             break;
         }
+
+        case vertexType::Tangent3:
+        {
+            D3D12_INPUT_ELEMENT_DESC myElement = { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, static_cast<UINT>(myVertexStride), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+            myVertexLayout.push_back(myElement);
+            myVertexStride += 3 * sizeof(float);
+            break;
+        }
+
         default:
             assert(0); // ????? 
         }
@@ -910,6 +919,15 @@ Mesh* RenderBackend::createMesh(MeshDesc aDesc)
             myVertexStride += 2 * sizeof(float);
             break;
         }
+
+        case vertexType::Tangent3:
+        {
+            D3D12_INPUT_ELEMENT_DESC element1 = { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, static_cast<UINT>(myVertexStride), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+            myMesh->vertexLayout.push_back(element1);
+            myVertexStride += 3 * sizeof(float);
+            break;
+        }
+
         default:
             assert(0); // ????? 
         }

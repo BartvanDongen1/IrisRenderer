@@ -90,7 +90,8 @@ enum class vertexType
 {
 	Position3,
 	TexCoord2,
-	Normal3
+	Normal3,
+	Tangent3
 };
 
 struct ConstBufferDesc

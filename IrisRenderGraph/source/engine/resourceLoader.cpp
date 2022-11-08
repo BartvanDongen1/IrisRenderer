@@ -2,6 +2,7 @@
 #include "rendering/resources/resourceDescs.h"
 #include "rendering/drawable/model.h"
 #include "engine/utility.h"
+#include "engine\logger.h"
 
 #define CGLTF_IMPLEMENTATION
 #pragma warning(push)
@@ -456,7 +457,7 @@ Model* loadGltfModel(const char* aPath)
 				cgltf_primitive* primitive = &mesh->primitives[i];
 				if (primitive->type != cgltf_primitive_type_triangles)
 				{
-					//Log(LogLevel_Error, "[GLTF PARSER]: unsupported primitive type");
+					LOG_ERROR("[GLTF PARSER]: unsupported primitive type");
 					return result;
 				}
 
@@ -473,10 +474,13 @@ Model* loadGltfModel(const char* aPath)
 				// In case you didn't know, this is the syntax to create a pointer to a fixed size array
 				float(*positions)[3] = nullptr;
 				float(*texcoords)[2] = nullptr;
+				float(*tangent)[3] = nullptr;
 				float(*normals)[3] = nullptr;
 
 				glm::vec3 pMin = glm::vec3(0);
 				glm::vec3 pMax = glm::vec3(0);
+
+				std::vector<vertexType> myVertexLayout;
 
 				for (size_t i = 0; i < primitive->attributes_count; i += 1)
 				{
@@ -489,67 +493,111 @@ Model* loadGltfModel(const char* aPath)
 
 					switch (attr->type)
 					{
-					case cgltf_attribute_type_position:
-					{
-						positions = GetAccessorPointer<float[3]>(attr->data);
-						pMin = glm::vec3(attr->data->min[0], attr->data->min[1], attr->data->min[2]);
-						pMax = glm::vec3(attr->data->max[0], attr->data->max[1], attr->data->max[2]);
-					} break;
+						case cgltf_attribute_type_position:
+						{
+							myVertexLayout.push_back(vertexType::Position3);
 
-					case cgltf_attribute_type_texcoord:
-					{
-						texcoords = GetAccessorPointer<float[2]>(attr->data);
-					} break;
+							positions = GetAccessorPointer<float[3]>(attr->data);
+							pMin = glm::vec3(attr->data->min[0], attr->data->min[1], attr->data->min[2]);
+							pMax = glm::vec3(attr->data->max[0], attr->data->max[1], attr->data->max[2]);
+						} break;
 
-					case cgltf_attribute_type_normal:
-					{
-						normals = GetAccessorPointer<float[3]>(attr->data);
-					} break;
+						case cgltf_attribute_type_texcoord:
+						{
+							myVertexLayout.push_back(vertexType::TexCoord2);
+
+							texcoords = GetAccessorPointer<float[2]>(attr->data);
+						} break;
+
+						case cgltf_attribute_type_normal:
+						{
+							myVertexLayout.push_back(vertexType::Normal3);
+
+							normals = GetAccessorPointer<float[3]>(attr->data);
+						} break;
+
+						case cgltf_attribute_type_tangent:
+						{
+							myVertexLayout.push_back(vertexType::Tangent3);
+
+							tangent = GetAccessorPointer<float[3]>(attr->data);
+						} break;
+						
+						default:
+						{
+							LOG_WARNING("undefined mesh attribute detected in mesh: %s", aPath);
+						}
 					}
-				}
-
-				std::vector<vertexType> myVertexLayout;
-				if (positions)
-				{
-					myVertexLayout.push_back(vertexType::Position3);
-				}
-
-				if (normals)
-				{
-					myVertexLayout.push_back(vertexType::Normal3);
-				}
-
-				if (texcoords)
-				{
-					myVertexLayout.push_back(vertexType::TexCoord2);
 				}
 
 				for (size_t i = 0; i < vertexCount; i += 1)
 				{
-					if (positions)
+					for (auto& attribute : myVertexLayout)
 					{
-						vertices.push_back(positions[i][0]);
-						vertices.push_back(positions[i][1]);
-						vertices.push_back(positions[i][2]);
+						switch (attribute)
+						{
+							case vertexType::Position3:
+							{
+								vertices.push_back(positions[i][0]);
+								vertices.push_back(positions[i][1]);
+								vertices.push_back(positions[i][2]);
+							} break;
 
-						//memcpy(&vertex->position, &positions[i], sizeof(positions[i]));
-					}
-					if (normals)
-					{
-						vertices.push_back(normals[i][0]);
-						vertices.push_back(normals[i][1]);
-						vertices.push_back(normals[i][2]);
+							case vertexType::Normal3:
+							{
+								vertices.push_back(normals[i][0]);
+								vertices.push_back(normals[i][1]);
+								vertices.push_back(normals[i][2]);
+							} break;
 
-						//memcpy(&vertex->normal, &normals[i], sizeof(normals[i]));
-					}
-						
-					if (texcoords)
-					{
-						vertices.push_back(texcoords[i][0]);
-						vertices.push_back(texcoords[i][1]);
+							case vertexType::TexCoord2:
+							{
+								vertices.push_back(texcoords[i][0]);
+								vertices.push_back(texcoords[i][1]);
+							} break;
 
-						//memcpy(&vertex->texcoord, &texcoords[i], sizeof(texcoords[i]));
+							case vertexType::Tangent3:
+							{
+								vertices.push_back(tangent[i][0]);
+								vertices.push_back(tangent[i][1]);
+								vertices.push_back(tangent[i][2]);
+							} break;
+						}
 					}
+
+					//if (positions)
+					//{
+					//	vertices.push_back(positions[i][0]);
+					//	vertices.push_back(positions[i][1]);
+					//	vertices.push_back(positions[i][2]);
+					// 
+					//	//memcpy(&vertex->position, &positions[i], sizeof(positions[i]));
+					//}
+					//if (normals)
+					//{
+					//	vertices.push_back(normals[i][0]);
+					//	vertices.push_back(normals[i][1]);
+					//	vertices.push_back(normals[i][2]);
+					//
+					//	//memcpy(&vertex->normal, &normals[i], sizeof(normals[i]));
+					//}
+					//	
+					//if (texcoords)
+					//{
+					//	vertices.push_back(texcoords[i][0]);
+					//	vertices.push_back(texcoords[i][1]);
+					//
+					//	//memcpy(&vertex->texcoord, &texcoords[i], sizeof(texcoords[i]));
+					//}
+					//
+					//if (tangent)
+					//{
+					//	vertices.push_back(tangent[i][0]);
+					//	vertices.push_back(tangent[i][1]);
+					//	vertices.push_back(tangent[i][2]);
+					//
+					//	//memcpy(&vertex->texcoord, &texcoords[i], sizeof(texcoords[i]));
+					//}
 				}
 
 				piece->aabb = combine(piece->aabb, AABB::minMax(pMin, pMax));
@@ -570,7 +618,8 @@ Model* loadGltfModel(const char* aPath)
 
 					size_t indexdataSize = primitive->indices->count * primitive->indices->stride;
 
-					meshDesc.indexData = indices;
+					meshDesc.indexData = malloc(indexdataSize);
+					memcpy(meshDesc.indexData, indices, indexdataSize);
 					meshDesc.indexDataSize = indexdataSize;
 				
 					if (primitive->indices->stride == 2)

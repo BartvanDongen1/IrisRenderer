@@ -136,7 +136,8 @@ bool Renderer::init()
 
 	// init gltf job and drawable 
 	{
-		fox1->initModel("resources/meshes/GLTF/fox/Fox.gltf");
+		//fox1->initModel("resources/meshes/GLTF/fox/Fox.gltf");
+		fox1->initModel("resources/meshes/GLTF/suzanne/Suzanne.gltf");
 
 		Job* myJob = fox1->getJob();
 		myJob->addPass("draw");

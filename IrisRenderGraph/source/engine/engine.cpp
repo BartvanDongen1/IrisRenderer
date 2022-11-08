@@ -13,7 +13,7 @@ void Engine::init()
 
 	inputManager.init();
 
-	ResourceLoader::getGltfModel("resources/meshes/GLTF/fox/Fox.gltf");
+	//ResourceLoader::getGltfModel("resources/meshes/GLTF/fox/Fox.gltf");
 }
 
 void Engine::update(float aDeltaTime)

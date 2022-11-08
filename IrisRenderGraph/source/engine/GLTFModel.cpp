@@ -28,8 +28,10 @@ void GLTFModel::initModel(const char* aModel)
 
 void GLTFModel::updateModel()
 {
-	modelMat->setScale({ 0.05,0.05,0.05 });
-	modelMat->setPosition({ -10, -1, 0 });
+	//modelMat->setScale({ 0.05,0.05,0.05 });
+	//modelMat->setPosition({ -10, -1, 0 });
+	modelMat->setScale({ 2, 2, 2 });
+	modelMat->setPosition({ -8, 2, 0 });
 
 	modelMatrix = modelMat->getModelMatrix();
 }
