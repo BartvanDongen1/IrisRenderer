@@ -15,6 +15,7 @@ class ConstBuffer;
 class Texture;
 class Sampler;
 class Drawable;
+class Drawable2;
 class RenderTarget;
 class RenderPassGraph;
 class DebugModelBuilder;
@@ -50,6 +51,7 @@ public:
 	static void beginScene(RenderTarget* aRenderTarget);
 	static void endScene(RenderTarget* aRenderTarget);
 	static void drawDrawable(Drawable* aDrawable);
+	static void drawDrawable2(Drawable2* aDrawable);
 
 	static ConstBuffer* initConstBuffer(ConstBufferDesc aDesc);
 	static Texture* initTexture(TextureDesc aDesc);

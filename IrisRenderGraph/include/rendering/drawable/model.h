@@ -7,6 +7,24 @@
 
 #include <glm/glm.hpp>
 
+struct ModelUniformBufffer
+{
+	glm::mat4 viewProjectionMatrix;
+	glm::mat4 modelMatrix;
+
+	glm::vec4 viewPosition;
+
+	glm::vec4 color{1, 1, 1, 1};
+
+	glm::mat4 depthBiasMVP;
+	glm::vec4 lightPosition;
+
+	int properties;
+
+	float padding[3];
+};
+
+
 struct Material
 {
 	bool unlit;
@@ -61,6 +79,8 @@ struct ModelNode
 
 	ModelPiece* piece;
 };
+
+glm::mat4 getLocalTransform(ModelNode* aNode);
 
 struct Model
 {

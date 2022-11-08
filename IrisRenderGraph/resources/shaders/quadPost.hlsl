@@ -22,7 +22,7 @@ float4 PSMain(PSInput input) : SV_TARGET
 {
     float2 inputUV = input.uv;
     float vignetteIntensity = 15;
-    float amount = 0.0000;
+    float amount = 0.0;
     
     float2 correctedUV = inputUV * (1.0 - inputUV.yx);
     float vig = correctedUV.x * correctedUV.y * vignetteIntensity;

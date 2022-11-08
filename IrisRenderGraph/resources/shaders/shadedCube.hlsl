@@ -87,7 +87,10 @@ float calculateShadow(const float4 shadowPosition, const float3 surfaceNormal, f
     }
     
     // calculate bias
-    float bias = BIAS_MULTIPLIER * tan(acos(dot(surfaceNormal, lightDirection)));
+    float nDotL = dot(surfaceNormal, lightDirection);
+    
+    // tan(acos(nDotL)) is simplified to remove trigonomic functions
+    float bias = BIAS_MULTIPLIER * (nDotL * rsqrt(1 - nDotL * nDotL));
     bias = clamp(bias, MIN_BIAS, MAX_BIAS);
     
     // PCF filtering
@@ -109,38 +112,6 @@ float calculateShadow(const float4 shadowPosition, const float3 surfaceNormal, f
     }
     
     return shadowAccumulation / 16.0f;
-    
-    
-    //float shadowAccumulation1 = 0.0f;
-    //float shadowAccumulation2 = 0.0f;
-    //float shadowAccumulation3 = 0.0f;
-    //float shadowAccumulation4 = 0.0f;
-    
-    //float currentDepth = projectedCoords.z;
-    //for (int i = 0; i < 16; i += 4)
-    //{
-    //    float2 offset1 = PoissonDisk[i] * textureSize * 0.5f;
-    //    float closestDepth1 = g_texture.Sample(g_sampler, projectedCoords.xy + offset1).x;
-       
-    //    shadowAccumulation1 += currentDepth > closestDepth1 - bias ? 1.0f : 0.0f;
-
-    //    float2 offset2 = PoissonDisk[i + 1] * textureSize * 0.5f;
-    //    float closestDepth2 = g_texture.Sample(g_sampler, projectedCoords.xy + offset2).x;
-        
-    //    shadowAccumulation2 += currentDepth > closestDepth2 - bias ? 1.0f : 0.0f;
-        
-    //    float2 offset3 = PoissonDisk[i + 2] * textureSize * 0.5f;
-    //    float closestDepth3 = g_texture.Sample(g_sampler, projectedCoords.xy + offset3).x;
-       
-    //    shadowAccumulation3 += currentDepth > closestDepth3 - bias ? 1.0f : 0.0f;
-        
-    //    float2 offset4 = PoissonDisk[i + 3] * textureSize * 0.5f;
-    //    float closestDepth4 = g_texture.Sample(g_sampler, projectedCoords.xy + offset4).x;
-       
-    //    shadowAccumulation4 += currentDepth > closestDepth4 - bias ? 1.0f : 0.0f;
-    //}
-    
-    //return ((shadowAccumulation1 + shadowAccumulation2) + (shadowAccumulation3 + shadowAccumulation4)) * 0.0625;
 }
 
 bool getSpecular()
@@ -171,7 +142,6 @@ float4 PSMain(PSInput input) : SV_TARGET
     // shadows
     float shadow = calculateShadow(input.shadowCoord, input.normal, lightDirection);
     
-    //float lightIntensity = AMBIENT_MULT + ((1 - shadow) * SHADOW_MULT) + (diffuse * DEFUSE_MULT);
     float lightIntensity = AMBIENT_MULT + (((1 - shadow) * (diffuse + spec)) * SHADOW_MULT);
 
     return myColor * lightIntensity;

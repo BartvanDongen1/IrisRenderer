@@ -12,6 +12,8 @@ void Engine::init()
 	renderer.init();
 
 	inputManager.init();
+
+	ResourceLoader::getGltfModel("resources/meshes/GLTF/fox/Fox.gltf");
 }
 
 void Engine::update(float aDeltaTime)

@@ -654,7 +654,7 @@ PipelineObject* RenderBackend::createPipelineObject(PipelineObjectDesc aDesc)
     // init root signature
     {
         std::vector<CD3DX12_DESCRIPTOR_RANGE1> myRanges;
-        int rangeIndex = 0;
+        int myRangeIndex = 0;
 
         for (int i = 0; i < aDesc.constBuffers.size(); i++)
         {
@@ -686,7 +686,7 @@ PipelineObject* RenderBackend::createPipelineObject(PipelineObjectDesc aDesc)
         for (int i = 0; i < aDesc.constBuffers.size(); i++)
         {
             CD3DX12_ROOT_PARAMETER1 myCBVRootParameter;
-            myCBVRootParameter.InitAsDescriptorTable(1, &myRanges[rangeIndex++], D3D12_SHADER_VISIBILITY_ALL);
+            myCBVRootParameter.InitAsDescriptorTable(1, &myRanges[myRangeIndex++], D3D12_SHADER_VISIBILITY_ALL);
             myRootParameters.push_back(myCBVRootParameter);
 
             ConstBuffer* myBuffer = initConstBuffer(aDesc.constBuffers[i]);
@@ -707,7 +707,7 @@ PipelineObject* RenderBackend::createPipelineObject(PipelineObjectDesc aDesc)
         for (int i = 0; i < aDesc.textures.size(); i++)
         {
             CD3DX12_ROOT_PARAMETER1 mySRVRootParameter;
-            mySRVRootParameter.InitAsDescriptorTable(1, &myRanges[rangeIndex++], D3D12_SHADER_VISIBILITY_PIXEL);
+            mySRVRootParameter.InitAsDescriptorTable(1, &myRanges[myRangeIndex++], D3D12_SHADER_VISIBILITY_PIXEL);
             myRootParameters.push_back(mySRVRootParameter);
 
             Texture* myTexture;
@@ -747,7 +747,7 @@ PipelineObject* RenderBackend::createPipelineObject(PipelineObjectDesc aDesc)
         for (int i = 0; i < aDesc.samplers.size(); i++)
         {
             CD3DX12_ROOT_PARAMETER1 mySamplerRootParameter;
-            mySamplerRootParameter.InitAsDescriptorTable(1, &myRanges[rangeIndex++], D3D12_SHADER_VISIBILITY_PIXEL);
+            mySamplerRootParameter.InitAsDescriptorTable(1, &myRanges[myRangeIndex++], D3D12_SHADER_VISIBILITY_PIXEL);
             myRootParameters.push_back(mySamplerRootParameter);
 
             Sampler* mySampler = initSampler(aDesc.samplers[i]);
@@ -800,8 +800,11 @@ PipelineObject* RenderBackend::createPipelineObject(PipelineObjectDesc aDesc)
         // Enable better shader debugging with the graphics debugging tools.
         UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 
-        ThrowIfFailed(D3DCompileFromFile(aDesc.vertexShader, nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &myPipelineObject->vertexShader, nullptr));
-        ThrowIfFailed(D3DCompileFromFile(aDesc.pixelShader, nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &myPipelineObject->pixelShader, nullptr));
+
+        D3D_SHADER_MACRO macros[] = { "TEST", "1", NULL, NULL };
+
+        ThrowIfFailed(D3DCompileFromFile(aDesc.vertexShader, macros, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &myPipelineObject->vertexShader, nullptr));
+        ThrowIfFailed(D3DCompileFromFile(aDesc.pixelShader, macros, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &myPipelineObject->pixelShader, nullptr));
     }
 
     int myVertexStride = 0;
@@ -812,24 +815,24 @@ PipelineObject* RenderBackend::createPipelineObject(PipelineObjectDesc aDesc)
         {
         case vertexType::Position3:
         {
-            D3D12_INPUT_ELEMENT_DESC element1 = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, static_cast<UINT>(myVertexStride), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-            myVertexLayout.push_back(element1);
+            D3D12_INPUT_ELEMENT_DESC myElement = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, static_cast<UINT>(myVertexStride), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+            myVertexLayout.push_back(myElement);
             myVertexStride += 3 * sizeof(float);
             break;
         }
 
         case vertexType::Normal3:
         {
-            D3D12_INPUT_ELEMENT_DESC element1 = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, static_cast<UINT>(myVertexStride), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-            myVertexLayout.push_back(element1);
+            D3D12_INPUT_ELEMENT_DESC myElement = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, static_cast<UINT>(myVertexStride), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+            myVertexLayout.push_back(myElement);
             myVertexStride += 3 * sizeof(float);
             break;
         }
 
         case vertexType::TexCoord2:
         {
-            D3D12_INPUT_ELEMENT_DESC element1 = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, static_cast<UINT>(myVertexStride), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-            myVertexLayout.push_back(element1);
+            D3D12_INPUT_ELEMENT_DESC myElement = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, static_cast<UINT>(myVertexStride), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+            myVertexLayout.push_back(myElement);
             myVertexStride += 2 * sizeof(float);
             break;
         }
@@ -1078,6 +1081,40 @@ void RenderBackend::drawDrawable(Drawable* aDrawable)
     commandList->DrawIndexedInstanced(aDrawable->mesh->indexCount, 1, 0, 0, 0);
 }
 
+void RenderBackend::drawDrawable2(Drawable2* aDrawable)
+{
+    for (const auto& primitive : aDrawable->primitives)
+    {
+        commandList->SetPipelineState(primitive->pipelineObject->pipelineState.Get());
+
+        // Set necessary state.
+        commandList->SetGraphicsRootSignature(primitive->pipelineObject->rootSignature.Get());
+
+        int myRootParameterIndex = 0;
+
+        for (int i = 0; i < primitive->pipelineObject->descriptorInfo.size(); i++)
+        {
+            if (primitive->pipelineObject->descriptorInfo[i].type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+            {
+                CD3DX12_GPU_DESCRIPTOR_HANDLE descriptorHandle(cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart(), primitive->pipelineObject->descriptorInfo[i].index, cbvSrvUavDescriptorSize);
+                commandList->SetGraphicsRootDescriptorTable(myRootParameterIndex++, descriptorHandle);
+            }
+            else
+            {
+                CD3DX12_GPU_DESCRIPTOR_HANDLE descriptorHandle(samplerHeap->GetGPUDescriptorHandleForHeapStart(), primitive->pipelineObject->descriptorInfo[i].index, samplerDescriptorSize);
+                commandList->SetGraphicsRootDescriptorTable(myRootParameterIndex++, descriptorHandle);
+            }
+        }
+
+        // Record commands.
+        commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        commandList->IASetVertexBuffers(0, 1, &primitive->mesh->vertexBufferView);
+        commandList->IASetIndexBuffer(&primitive->mesh->indexBufferView);
+
+        commandList->DrawIndexedInstanced(primitive->mesh->indexCount, 1, 0, 0, 0);
+    }
+}
+
 ConstBuffer* RenderBackend::initConstBuffer(ConstBufferDesc aDesc)
 {
     ConstBuffer* myBuffer = new ConstBuffer();
@@ -1136,6 +1173,20 @@ ConstBuffer* RenderBackend::initConstBuffer(ConstBufferDesc aDesc)
 
 Texture* RenderBackend::initTexture(TextureDesc aDesc)
 {
+    // place local variable here to keep it inside scope when copying data
+    INT32 defaultValueTextureData = 0x000000FF;
+
+    if (aDesc.width == 0 && aDesc.height == 0)
+    {
+        // if texture is empty assume a default black texture
+        aDesc.width = 1;
+        aDesc.height = 1;
+
+        aDesc.bytesPerPixel = 4;
+
+        aDesc.data = reinterpret_cast<void*>(&defaultValueTextureData);
+    }
+
     Texture* myTexture = new Texture();
 
     //todo: figure out a way to upload all textures to GPU at once

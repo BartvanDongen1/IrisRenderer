@@ -86,6 +86,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\engine\GLTFModel.h" />
     <ClInclude Include="include\engine\aabb.h" />
     <ClInclude Include="include\engine\utility.h" />
     <ClInclude Include="include\rendering\debugModelBuilder.h" />
@@ -123,6 +124,7 @@
     <ClInclude Include="include\engine\skybox.h" />
     <ClInclude Include="include\rendering\drawable\model.h" />
     <ClInclude Include="include\engine\logger.h" />
+    <ClInclude Include="include\engine\modelMatrix.h" />
     <ClInclude Include="source\rendering\helper.h" />
     <ClInclude Include="source\rendering\imgui-docking\imgui_impl_dx12.h" />
     <ClInclude Include="source\rendering\imgui-docking\imgui_impl_win32.h" />
@@ -131,6 +133,8 @@
     <ClInclude Include="include\engine\theCube.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\engine\modelMatrix.cpp" />
+    <ClCompile Include="source\engine\GLTFModel.cpp" />
     <ClCompile Include="source\engine\logger.cpp" />
     <ClCompile Include="source\engine\aabb.cpp" />
     <ClCompile Include="source\rendering\drawable\model.cpp" />

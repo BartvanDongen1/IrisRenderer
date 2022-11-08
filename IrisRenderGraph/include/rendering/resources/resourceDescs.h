@@ -98,7 +98,7 @@ struct ConstBufferDesc
 	const char* name{ "default" };
 	size_t size;
 
-	void* data;
+	void* data{ nullptr };
 
 	const char* graphBufferName{ "" };
 };

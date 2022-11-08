@@ -142,7 +142,6 @@ MeshDesc loadMesh(const char* aPath)
 TextureDesc loadTexture(const char* aPath)
 {
 	// load image
-	stbi_set_flip_vertically_on_load(true);
 	int width;
 	int height;
 	int comp;
@@ -331,12 +330,12 @@ static AABB CalculateAABB(ModelNode* node, AABB aabb = AABB::invertedInfinity(),
 	return aabb;
 }
 
-struct Vertex
-{
-	float position[3];
-	float normal[3] ;
-	float texcoord[2];
-};
+//struct Vertex
+//{
+//	float position[3];
+//	float normal[3] ;
+//	float texcoord[2];
+//};
 
 Model* loadGltfModel(const char* aPath)
 {
@@ -464,10 +463,12 @@ Model* loadGltfModel(const char* aPath)
 				
 
 				size_t vertexCount = primitive->attributes[0].data->count;
-				size_t vertexDataSize = vertexCount * sizeof(Vertex);
+				//size_t vertexDataSize = vertexCount * sizeof(Vertex);
 
-				auto vertices = new Vertex[vertexCount];
-				defer{ delete[] vertices; };
+				std::vector<float> vertices;
+
+				//auto vertices = new Vertex[vertexCount];
+				//defer{ delete[] vertices; };
 				
 				// In case you didn't know, this is the syntax to create a pointer to a fixed size array
 				float(*positions)[3] = nullptr;
@@ -525,11 +526,30 @@ Model* loadGltfModel(const char* aPath)
 
 				for (size_t i = 0; i < vertexCount; i += 1)
 				{
-					Vertex* vertex = &vertices[i];
+					if (positions)
+					{
+						vertices.push_back(positions[i][0]);
+						vertices.push_back(positions[i][1]);
+						vertices.push_back(positions[i][2]);
 
-					if(positions) memcpy(&vertex->position, &positions[i], sizeof(positions[i]));
-					if(normals) memcpy(&vertex->normal, &normals[i], sizeof(normals[i]));
-					if(texcoords) memcpy(&vertex->texcoord, &texcoords[i], sizeof(texcoords[i]));
+						//memcpy(&vertex->position, &positions[i], sizeof(positions[i]));
+					}
+					if (normals)
+					{
+						vertices.push_back(normals[i][0]);
+						vertices.push_back(normals[i][1]);
+						vertices.push_back(normals[i][2]);
+
+						//memcpy(&vertex->normal, &normals[i], sizeof(normals[i]));
+					}
+						
+					if (texcoords)
+					{
+						vertices.push_back(texcoords[i][0]);
+						vertices.push_back(texcoords[i][1]);
+
+						//memcpy(&vertex->texcoord, &texcoords[i], sizeof(texcoords[i]));
+					}
 				}
 
 				piece->aabb = combine(piece->aabb, AABB::minMax(pMin, pMax));
@@ -538,8 +558,9 @@ Model* loadGltfModel(const char* aPath)
 
 				MeshDesc meshDesc{};
 
-				meshDesc.vertexData;
-				meshDesc.vertexDataSize = vertexDataSize;
+				meshDesc.vertexData = malloc(vertices.size() * sizeof(float));
+				memcpy(meshDesc.vertexData, vertices.data(), vertices.size() * sizeof(float));
+				meshDesc.vertexDataSize = vertices.size() * sizeof(float);
 
 				meshDesc.vertexLayout = myVertexLayout;
 
@@ -567,8 +588,14 @@ Model* loadGltfModel(const char* aPath)
 					}
 				}
 
+				myPrimitive->meshDesc = meshDesc;
 				
+				myPrimitive->material.textureBaseColor = TextureDesc();
+				myPrimitive->material.textureNormal = TextureDesc();
+				myPrimitive->material.textureMetallicRoughness = TextureDesc();
+
 				cgltf_texture* diffuse = nullptr;
+				cgltf_texture* normal = nullptr;
 				cgltf_material* material = primitive->material;
 				if (material->has_pbr_metallic_roughness)
 				{
@@ -585,9 +612,16 @@ Model* loadGltfModel(const char* aPath)
 						material->pbr_specular_glossiness.diffuse_factor[2]);
 				}
 
+				normal = material->normal_texture.texture;
+
 				if (diffuse)
 				{
 					myPrimitive->material.textureBaseColor = images[GLTFImageIndex(data, diffuse->image)];
+				}
+
+				if (normal)
+				{
+					myPrimitive->material.textureNormal = images[GLTFImageIndex(data, normal->image)];
 				}
 			}
 		}

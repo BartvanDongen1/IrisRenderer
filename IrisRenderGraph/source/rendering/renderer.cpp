@@ -15,6 +15,7 @@
 #include "engine/theCube.h"
 #include "engine/skybox.h"
 #include "engine/camera.h"
+#include "engine\GLTFModel.h"
 
 static RenderBackend backend;
 static RenderPassGraph* graph;
@@ -28,6 +29,10 @@ static TheCube* cube1 = new TheCube();
 static TheCube* cube2 = new TheCube();
 static TheCube* cube3 = new TheCube();
 
+static GLTFModel* fox1 = new GLTFModel();
+
+static Drawable2* drawable2 = new Drawable2();
+
 static Skybox* skybox = new Skybox();
 
 static Camera* camera{ nullptr };
@@ -40,6 +45,12 @@ bool Renderer::init()
 	backend.initImGui();
 
 	graph = new RenderPassGraph();
+
+	GraphBufferResource* myResource = new GraphBufferResource();
+	myResource->data = camera;
+	myResource->size = sizeof(Camera);
+
+	graph->addBufferResource("camera", myResource);
 
 	RenderBackend::setGraphForResources(graph);
 
@@ -123,6 +134,22 @@ bool Renderer::init()
 		graph->addJob(myShadowPassJob);
 	}
 
+	// init gltf job and drawable 
+	{
+		fox1->initModel("resources/meshes/GLTF/fox/Fox.gltf");
+
+		Job* myJob = fox1->getJob();
+		myJob->addPass("draw");
+
+		graph->addJob(myJob);
+	}
+
+
+	//debug lines
+	{
+		//DebugModelBuilder::drawSphere(glm::vec4(2, 2, 2, 0), 5.f, {1, 0, 0, 1}, 3);
+	}
+
 	graph->buildAndValidate();
 
 	return true;
@@ -143,6 +170,8 @@ void Renderer::update(float aDeltaTime)
 	cube2->update(aDeltaTime);
 	cube3->update(aDeltaTime);
 
+	fox1->updateModel();
+
 	frameTimeAccumilator += aDeltaTime;
 	framesThisSecond++;
 
@@ -152,6 +181,7 @@ void Renderer::update(float aDeltaTime)
 		fps = framesThisSecond * 5;
 		framesThisSecond = 0;
 	}
+
 
 	backend.beginFrame();
 
